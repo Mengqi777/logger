@@ -203,10 +203,8 @@ func (f *fileLogger) createFreshFile(logTime time.Time) error {
 	}
 	// 日期变了， 说明跨天，重命名时需要保存为昨天的日期
 	if f.dailyOpenDate != logTime.Day() {
-		for ; err == nil && num <= 999; num++ {
-			fName = f.fileNameOnly + fmt.Sprintf(".%s.%s", f.dailyOpenTime.Format("2006-01-02"), f.suffix)
-			_, err = os.Lstat(fName)
-		}
+		fName = f.fileNameOnly + fmt.Sprintf(".%s.%s", f.dailyOpenTime.Format("2006-01-02"), f.suffix)
+		_, err = os.Lstat(fName)
 	} else { //如果仅仅是文件大小或行数达到了限制，仅仅变更后缀序号即可
 		for ; err == nil && num <= 999; num++ {
 			fName = f.fileNameOnly + fmt.Sprintf(".%s.%03d%s", logTime.Format("2006-01-02"), num, f.suffix)
