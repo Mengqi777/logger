@@ -58,12 +58,11 @@ func (f *fileLogger) Init(jsonConfig string) error {
 	if len(f.Filename) == 0 {
 		return errors.New("jsonconfig must have filename")
 	}
-	f.suffix = filepath.Ext(f.Filename)
-	f.fileNameOnly = strings.TrimSuffix(f.Filename, f.suffix)
+
+	f.fileNameOnly = filepath.Base(f.Filename)
+	tn:=time.Now()
+	f.Filename=fmt.Sprintf("%s.%s",f.fileNameOnly,  tn.Format("2006-01-02"))
 	f.MaxSize *= 1024 * 1024 // 将单位转换成MB
-	if f.suffix == "" {
-		f.suffix = ".log"
-	}
 	if l, ok := LevelMap[f.Level]; ok {
 		f.LogLevel = l
 	}
@@ -122,6 +121,8 @@ func (f *fileLogger) createLogFile() (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
+	tn:=time.Now()
+	f.Filename=fmt.Sprintf("%s.%s",f.fileNameOnly,  tn.Format("2006-01-02"))
 	fd, err := os.OpenFile(f.Filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.FileMode(perm))
 	if err == nil {
 		// Make sure file perm is user set perm cause of `os.OpenFile` will obey umask
@@ -189,46 +190,50 @@ func (f *fileLogger) lines() (int, error) {
 func (f *fileLogger) createFreshFile(logTime time.Time) error {
 	// file exists
 	// Find the next available number
-	num := 1
-	fName := ""
-	rotatePerm, err := strconv.ParseInt(f.PermitMask, 8, 64)
-	if err != nil {
-		return err
-	}
+	//num := 1
+	//fName := ""
+	//rotatePerm, err := strconv.ParseInt(f.PermitMask, 8, 64)
+	//if err != nil {
+	//	return err
+	//}
 
-	_, err = os.Lstat(f.Filename)
+	_, err := os.Lstat(f.Filename)
 	if err != nil {
 		// 初始日志文件不存在，无需创建新文件
 		goto RESTART_LOGGER
 	}
 	// 日期变了， 说明跨天，重命名时需要保存为昨天的日期
 	if f.dailyOpenDate != logTime.Day() {
-		fName = f.fileNameOnly + fmt.Sprintf(".%s.%s", f.dailyOpenTime.Format("2006-01-02"), f.suffix)
-		_, err = os.Lstat(fName)
+		//fName = f.fileNameOnly[:len(f.fileNameOnly)-10] + fmt.Sprintf("%s", f.dailyOpenTime.Format("2006-01-02"))
+		//_, err = os.Lstat(fName)
+		f.fileWriter.Close()
+		goto RESTART_LOGGER
+
 	} else { //如果仅仅是文件大小或行数达到了限制，仅仅变更后缀序号即可
-		for ; err == nil && num <= 999; num++ {
-			fName = f.fileNameOnly + fmt.Sprintf(".%s.%03d%s", logTime.Format("2006-01-02"), num, f.suffix)
-			_, err = os.Lstat(fName)
-		}
+		//for ; err == nil && num <= 999; num++ {
+		//	fName = f.fileNameOnly + fmt.Sprintf(".%s.%03d%s", logTime.Format("2006-01-02"), num, f.suffix)
+		//	_, err = os.Lstat(fName)
+		//}
 	}
 
-	if err == nil {
-		return fmt.Errorf("Cannot find free log number to rename %s", f.Filename)
-	}
-	f.fileWriter.Close()
+	//if err == nil {
+	//	return fmt.Errorf("Cannot find free log number to rename %s", f.Filename)
+	//}
+	//err=f.fileWriter.Close()
 
 	// 当创建新文件标记为true时
 	// 当日志文件超过最大限制行
 	// 当日志文件超过最大限制字节
 	// 当日志文件隔天更新标记为true时
 	// 将旧文件重命名，然后创建新文件
-	err = os.Rename(f.Filename, fName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "os.Rename %s to %s err:%s\n", f.Filename, fName, err.Error())
-		goto RESTART_LOGGER
-	}
-
-	err = os.Chmod(fName, os.FileMode(rotatePerm))
+	//println(f.Filename,fName)
+	//err = os.Rename(f.Filename, fName)
+	//if err != nil {
+	//	fmt.Fprintf(os.Stderr, "os.Rename %s to %s err:%s\n", f.Filename, fName, err.Error())
+	//	goto RESTART_LOGGER
+	//}
+	//
+	//err = os.Chmod(fName, os.FileMode(rotatePerm))
 
 RESTART_LOGGER:
 
@@ -258,8 +263,7 @@ func (f *fileLogger) deleteOldLog() {
 		}
 
 		if f.MaxDays != -1 && !info.IsDir() && info.ModTime().Add(24*time.Hour*time.Duration(f.MaxDays)).Before(time.Now()) {
-			if strings.HasPrefix(filepath.Base(path), filepath.Base(f.fileNameOnly)) &&
-				strings.HasSuffix(filepath.Base(path), f.suffix) {
+			if strings.HasPrefix(filepath.Base(path), filepath.Base(f.fileNameOnly)) {
 				os.Remove(path)
 			}
 		}
@@ -278,7 +282,7 @@ func init() {
 		Append:     true,
 		LogLevel:   LevelDebug,
 		PermitMask: "0777",
-		MaxLines:   10,
-		MaxSize:    10 * 1024 * 1024,
+		MaxLines:   -1,
+		MaxSize:    -1,
 	})
 }

@@ -114,7 +114,7 @@ func TestFileByMaxLine(t *testing.T) {
 
 func TestFileByTime(t *testing.T) {
 	fn1 := "rotate_day.log"
-	fn2 := "rotate_day" + fmt.Sprintf(".%s.%03d", time.Now().Add(-24*time.Hour).Format("2006-01-02"), 1) + ".log"
+	//fn2 := "rotate_day" + fmt.Sprintf(".%s", time.Now().Add(-24*time.Hour).Format("2006-01-02")) + "log"
 	fw := &fileLogger{
 		Daily:      true,
 		MaxDays:    7,
@@ -123,11 +123,14 @@ func TestFileByTime(t *testing.T) {
 		PermitMask: "0660",
 	}
 	fw.Init(fmt.Sprintf(`{"filename":"%v","maxdays":1}`, fn1))
-	fw.dailyOpenTime = time.Now().Add(-24 * time.Hour)
+	fw.dailyOpenTime = time.Now().Add(24 * time.Hour)
 	fw.dailyOpenDate = fw.dailyOpenTime.Day()
 	fw.LogWrite(time.Now(), "this is a msg for test", LevelTrace)
-
-	for _, file := range []string{fn1, fn2} {
+time.Sleep(65*time.Second)
+	fw.LogWrite(time.Now(), "this is a msg for test2", LevelTrace)
+	time.Sleep(65*time.Second)
+	fw.LogWrite(time.Now(), "this is a msg for test3", LevelTrace)
+	for _, file := range []string{fn1} {
 		_, err := os.Stat(file)
 		if err != nil {
 			t.FailNow()
