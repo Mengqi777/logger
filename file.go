@@ -61,7 +61,7 @@ func (f *fileLogger) Init(jsonConfig string) error {
 
 	f.fileNameOnly = filepath.Base(f.Filename)
 	tn:=time.Now()
-	f.Filename=fmt.Sprintf("%s.%s",f.fileNameOnly,  tn.Format("2006-01-02"))
+	f.Filename= filepath.Dir(f.Filename)+fmt.Sprintf("/%s.%s",f.fileNameOnly,  tn.Format("2006-01-02"))
 	f.MaxSize *= 1024 * 1024 // 将单位转换成MB
 	if l, ok := LevelMap[f.Level]; ok {
 		f.LogLevel = l
@@ -122,7 +122,7 @@ func (f *fileLogger) createLogFile() (*os.File, error) {
 		return nil, err
 	}
 	tn:=time.Now()
-	f.Filename=fmt.Sprintf("%s.%s",f.fileNameOnly,  tn.Format("2006-01-02"))
+	f.Filename= filepath.Dir(f.Filename)+fmt.Sprintf("/%s.%s",f.fileNameOnly,  tn.Format("2006-01-02"))
 	fd, err := os.OpenFile(f.Filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.FileMode(perm))
 	if err == nil {
 		// Make sure file perm is user set perm cause of `os.OpenFile` will obey umask
